@@ -28,6 +28,9 @@ const TransactionHistory = () => {
         setUserAmount(user.amount || 0);
         setUserName(user.firstName || "");
         setLastName(user.lastName || "");
+        console.log(userName)
+        console.log(userLastName)
+
 
         const history = await fetchHistoryForLoggedUser(user.email);
         setTransactions(history);
