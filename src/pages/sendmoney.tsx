@@ -16,7 +16,7 @@ const SendMoney = () => {
     bank: "",
     accountNumber: "",
     routingNumber: "",
-    amount: "",
+    amount: "", // keep raw number as string
     purpose: "",
   });
 
@@ -43,8 +43,32 @@ const SendMoney = () => {
     fetchData();
   }, []);
 
+  // Format input for display, store raw in state
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9.]/g, ""); // allow digits & dot
+    setReceiver({ ...receiver, amount: raw });
+  };
+
+  const formatDisplayAmount = (value: string) => {
+    if (!value) return "";
+    const num = Number(value);
+    if (isNaN(num)) return "";
+    return num.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setReceiver({ ...receiver, [e.target.name]: e.target.value });
+    if (e.target.name === "amount") {
+      handleAmountChange(e);
+    } else {
+      setReceiver({ ...receiver, [e.target.name]: e.target.value });
+    }
+  };
+
+  const formatAmountForHistory = (amount: number) => {
+    return `$${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,12 +95,13 @@ const SendMoney = () => {
 
     setLoading(true);
 
-    // 🔹 Create new history entry like Admin
+    // 🔹 New history entry like Admin
     const newHistoryEntry = {
       date: new Date().toISOString().split("T")[0],
       amount: transferAmount,
       description: `Transfer to ${receiver.name}`,
       type: "debit",
+      formattedAmount: formatAmountForHistory(transferAmount),
     };
 
     const updatedUser = {
@@ -86,13 +111,12 @@ const SendMoney = () => {
     };
 
     try {
-      // 🔹 Find index like Admin panel
+      // 🔹 Find index and update backend like Admin panel
       const index = users.findIndex((u) => u.email === user.email);
       if (index !== -1) {
-        // 🔹 Update backend like Admin panel
         await updateUser(index, updatedUser);
 
-        // 🔹 Update local state & localStorage
+        // 🔹 Update local state & storage
         const updatedUsers = [...users];
         updatedUsers[index] = updatedUser;
         setUsers(updatedUsers);
@@ -131,7 +155,7 @@ const SendMoney = () => {
         <div className="bg-white rounded-xl p-6 shadow">
           <h2 className="text-gray-700 font-medium">Total Balance</h2>
           <h1 className="text-3xl font-bold mt-2">
-            ${user?.amount.toLocaleString()}
+            ${user?.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h1>
         </div>
       </div>
@@ -161,15 +185,19 @@ const SendMoney = () => {
               { name: "bank", label: "Bank Name" },
               { name: "accountNumber", label: "Account Number" },
               { name: "routingNumber", label: "Routing Number" },
-              { name: "amount", label: "Transfer Amount", type: "number" },
+              { name: "amount", label: "Transfer Amount" },
               { name: "purpose", label: "Purpose (Optional)" },
             ].map((field) => (
               <div key={field.name} className="bg-gray-100 p-3 rounded-lg">
                 <label className="text-sm text-gray-600">{field.label}</label>
                 <input
-                  type={field.type || "text"}
+                  type="text"
                   name={field.name}
-                  value={(receiver as any)[field.name]}
+                  value={
+                    field.name === "amount"
+                      ? formatDisplayAmount(receiver.amount)
+                      : (receiver as any)[field.name]
+                  }
                   onChange={handleInputChange}
                   className="w-full mt-1 px-4 py-2 border rounded-lg"
                   required={field.name !== "purpose"}
