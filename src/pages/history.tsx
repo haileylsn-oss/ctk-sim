@@ -153,86 +153,75 @@ const TransactionHistory = () => {
           )}
         </div>
 
-        {selectedTransaction && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center px-4 md:px-8">
-              <button
-              onClick={() => setSelectedTransaction(null)}
-              className="absolute top-2 right-4 text-gray-500 text-xl hover:text-black"
-            >
-              &times;
-            </button>
-            <div className="w-full max-w-lg mx-auto bg-white p-4 rounded-xl border shadow-sm">
-              {/* Title */}
-              <h2 className="text-2xl font-semibold mb-3">
-                Transfer Confirmed
-              </h2>
+      {selectedTransaction && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center px-4 md:px-8">
+    <button
+      onClick={() => setSelectedTransaction(null)}
+      className="absolute top-2 right-4 text-gray-500 text-xl hover:text-black"
+    >
+      &times;
+    </button>
 
-              {/* Top green box */}
-              <div className="border rounded-lg p-4 flex items-start gap-3 bg-[#f9fffa]">
-                <CheckCircle className="text-green-600" size={24} />
-                <p className="text-gray-700">
-                  You sent <span className="font-semibold">$7,000.00</span> on{" "}
-                  <span className="font-semibold">12/11/2025</span>
-                </p>
-              </div>
+    <div className="w-full max-w-lg mx-auto bg-white p-4 rounded-xl border shadow-sm">
+      <h2 className="text-2xl font-semibold mb-3">Transfer Confirmed</h2>
 
-              {/* Details */}
-              <div className="mt-5 space-y-2 text-gray-700 text-sm">
-                <p>
-                  <span className="font-semibold">From</span> CTK Bank, CTK
-                  SIMPLE SAVINGS, ******0034 — $7,000.00
-                </p>
-                <p>
-                  <span className="font-semibold">To</span> Berkshire Bank,
-                  ******5466
-                </p>
-                <p>
-                  <span className="font-semibold">Account Holder</span> Gary A
-                  Zoller 
-                </p>
-                <p>
-                  <span className="font-semibold">Reference #</span> 608455334
-                </p>
-                <p>
-                  <span className="font-semibold">Send</span> 12/11/2025
-                </p>
-                <p>
-                  <span className="font-semibold">Deliver</span> 12/11/2025
-                </p>
-                <p>
-                  <span className="font-semibold">Speed</span> Standard
-                </p>
-                <p>
-                  <span className="font-semibold">Memo</span> CTK to Berkshire
-                  Bank
-                </p>
-                <p>
-                  <span className="font-semibold">Transfer Amount</span>{" "}
-                  $7,000.00
-                </p>
-                <p>
-                  <span className="font-semibold">Fees</span> Free
-                </p>
-                <p className="font-semibold">Total $7,000.00</p>
-              </div>
+      <div className="border rounded-lg p-4 flex items-start gap-3 bg-[#f9fffa]">
+        <CheckCircle className="text-green-600" size={24} />
+        <p className="text-gray-700">
+          You sent{" "}
+          <span className="font-semibold">
+            {Number(selectedTransaction.amount).toLocaleString("en-US", {
+              style: "currency",
+              currency: "USD",
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>{" "}
+          on <span className="font-semibold">{selectedTransaction.date}</span>
+        </p>
+      </div>
 
-              {/* Buttons */}
-              <div className="mt-6 flex flex-col gap-3">
-                <Link to={"/history"}>
-                  <button className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold"
-                   onClick={() => setSelectedTransaction(null)}>
-                    Activity
-                  </button>
-                </Link>
+      <div className="mt-5 space-y-2 text-gray-700 text-sm">
+        <p>
+          <span className="font-semibold">Description:</span>{" "}
+          {selectedTransaction.description}
+        </p>
+        <p>
+          <span className="font-semibold">Type:</span>{" "}
+          {selectedTransaction.type}
+        </p>
+        <p>
+          <span className="font-semibold">Amount:</span>{" "}
+          {Number(selectedTransaction.amount).toLocaleString("en-US", {
+            style: "currency",
+            currency: "USD",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </p>
+      </div>
 
-                <button className="w-full border border-green-600 text-green-600 py-3 rounded-lg font-semibold"
-                 onClick={() => setSelectedTransaction(null)}>
-                  New Transfer
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="mt-6 flex flex-col gap-3">
+        <Link to={"/history"}>
+          <button
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold"
+            onClick={() => setSelectedTransaction(null)}
+          >
+            Activity
+          </button>
+        </Link>
+
+        <button
+          className="w-full border border-green-600 text-green-600 py-3 rounded-lg font-semibold"
+          onClick={() => setSelectedTransaction(null)}
+        >
+          New Transfer
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
         {/* <StickyBottomNav /> */}
       </div>
