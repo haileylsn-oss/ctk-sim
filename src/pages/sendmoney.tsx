@@ -1,20 +1,16 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import BottomNav from "./stickyNav";
-import {  useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaCreditCard } from "react-icons/fa";
 import BottomNav2 from "./bottomnav2";
-import log from '../assets/logo.png'
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft, FaCreditCard } from "react-icons/fa";
+import log from "../assets/logo.png";
+import { getUsers, updateUser } from "../backend/api"; // Ensure same API as Admin
 
 const SendMoney = () => {
-  const [amount, setAmount] = useState("");
-  const [userImage, setUserImage] = useState<string>("");
   const [user, setUser] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userImage, setUserImage] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
-  const navigate = useNavigate();
-  const [success, setSuccess] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
   const [receiver, setReceiver] = useState({
     name: "",
     bank: "",
@@ -22,284 +18,219 @@ const SendMoney = () => {
     routingNumber: "",
     amount: "",
     purpose: "",
-    senderAccount: "",
-    comment: "",
   });
+
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(false);
+
+  const navigate = useNavigate();
+
+  // Fetch users like Admin panel
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await getUsers();
+      setUsers(data);
+
+      const storedUser = localStorage.getItem("loggedInUser");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setUserImage(parsedUser.profilePicture || "default-avatar.jpg");
+        setUserName(parsedUser.firstName || "User");
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setReceiver({ ...receiver, [e.target.name]: e.target.value });
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
+    const transferAmount = Number(receiver.amount);
+    const count = Number(localStorage.getItem("transferCount") || 0);
 
-
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-
-  // get transaction count from localStorage
-  const count = Number(localStorage.getItem("transferCount") || 0);
-
-  // if attempts already reached 3 → block transfer
-  if (count >= 3) {
-    setError(true);
-    return;
-  }
-
-  setLoading(true);
-
-  setTimeout(() => {
-    setLoading(false);
-    setSuccess(true);
-
-    // increase attempt count
-    localStorage.setItem("transferCount", String(count + 1));
-
-  }, 3000);
-};
-
-
-
-  
-
-
-  useEffect(() => {
-    // Retrieve user details from localStorage
-    const storedUser = localStorage.getItem("loggedInUser");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setAmount(parsedUser.amount); // Set initial amount
-      setUserImage(parsedUser.profilePicture || "default-avatar.jpg"); // Use parsedUser instead of user
-      setUserName(parsedUser.firstName || "User"); // Use parsedUser instead of user
-      console.log(amount)
-    } else {
-      setUserImage("default-avatar.jpg"); 
-      setUserName("User"); 
+    if (count >= 3) {
+      setError(true);
+      return;
     }
-  }, []);
-  
 
+    if (transferAmount <= 0) {
+      alert("Invalid transfer amount");
+      return;
+    }
+
+    if (transferAmount > user.amount) {
+      alert("Insufficient balance");
+      return;
+    }
+
+    setLoading(true);
+
+    // 🔹 Create new history entry like Admin
+    const newHistoryEntry = {
+      date: new Date().toISOString().split("T")[0],
+      amount: transferAmount,
+      description: `Transfer to ${receiver.name}`,
+      type: "debit",
+    };
+
+    const updatedUser = {
+      ...user,
+      amount: user.amount - transferAmount,
+      history: [newHistoryEntry, ...(user.history || [])],
+    };
+
+    try {
+      // 🔹 Find index like Admin panel
+      const index = users.findIndex((u) => u.email === user.email);
+      if (index !== -1) {
+        // 🔹 Update backend like Admin panel
+        await updateUser(index, updatedUser);
+
+        // 🔹 Update local state & localStorage
+        const updatedUsers = [...users];
+        updatedUsers[index] = updatedUser;
+        setUsers(updatedUsers);
+        setUser(updatedUser);
+        localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
+        localStorage.setItem("transferCount", String(count + 1));
+      }
+
+      setLoading(false);
+      setSuccess(true);
+    } catch (err) {
+      console.error("Error updating user:", err);
+      alert("Failed to send money. Please try again.");
+      setLoading(false);
+    }
+  };
 
   return (
     <>
-      <div className="">
-        {/* Header */}
-        <div className="bg-red-800  text-white p-4 flex justify-between items-center sticky top-0 z-10">
- {user && (
-            <img
-              src={userImage}
-              alt="Profile"
-              className="h-10 w-10 rounded-full border-2 border-white"
-            />
-          )}
-        <h1 className="text-lg text-white font-thin">
-  {userName ? `${userName}${userName.endsWith("'") ? "" : "'s"} Dashboard` : "Dashboard"}
-</h1>
-
-        </div>
-
-        {/* Main Content */}
-        <div className="flex flex-col lg:flex-row lg:space-x-6 lg:px-6 mt-8">
-          {/* Left Section */}
-          <div className="lg:w-1/3 space-y-6">
-            {/* Total Balance Section */}
-            <div className="bg-white rounded-xl p-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-gray-700 font-medium">Total Balance</h2>
-                <button className="bg-red-100 text-red-600 p-2 rounded-lg">
-                  <span className="material-icons">content_copy</span>
-                </button>
-              </div>
-              <h1 className="text-3xl font-bold mt-2">
-                ${user?.amount.toLocaleString()}
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        <hr />
-
-      
+      {/* Header */}
+      <div className="bg-red-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
+        {user && (
+          <img
+            src={userImage}
+            alt="Profile"
+            className="h-10 w-10 rounded-full border-2 border-white"
+          />
+        )}
+        <h1 className="text-lg font-thin">
+          {userName ? `${userName}'s Dashboard` : "Dashboard"}
+        </h1>
       </div>
 
+      {/* Balance */}
+      <div className="p-6">
+        <div className="bg-white rounded-xl p-6 shadow">
+          <h2 className="text-gray-700 font-medium">Total Balance</h2>
+          <h1 className="text-3xl font-bold mt-2">
+            ${user?.amount.toLocaleString()}
+          </h1>
+        </div>
+      </div>
+
+      {/* Transfer Form */}
       <div className="min-h-screen bg-gray-50 flex flex-col items-center px-4 py-6">
-            {/* Header */}
-            <header className="w-full flex items-center justify-between py-4 border-b lg:max-w-md">
-              <button className="text-xl text-gray-600" onClick={() => navigate(-1)}>
-                <FaArrowLeft />
-              </button>
-              <h1 className="text-lg font-semibold">New Transfer</h1>
-              <div className="w-8"></div>
-            </header>
-      
-            {/* Payment Form */}
-            <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6 mt-6">
-              <h2 className="text-gray-700 text-lg font-medium mb-4">Transfer Details</h2>
-      
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                {/* From */}
-                <div className="flex items-center justify-between bg-gray-100 p-3 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <FaCreditCard className="text-red-600 text-xl" />
-                    <div>
-                      <p className="text-sm text-gray-700 font-medium">Debit Card</p>
-                      <p className="text-xs text-gray-500">**** **** **** 4900</p>
-                    </div>
-                  </div>
-                  <button className="text-red-500 text-sm">Change</button>
-                </div>
-      
-                {/* Recipient Details */}
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <label className="text-sm text-gray-600">Receiver Full Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Enter name"
-                    value={receiver.name}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 outline-none"
-                    required
-                  />
-                </div>
-      
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <label className="text-sm text-gray-600">Bank Name</label>
-                  <input
-                    type="text"
-                    name="bank"
-                    placeholder="Enter bank name"
-                    value={receiver.bank}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 outline-none"
-                    required
-                  />
-                </div>
-      
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <label className="text-sm text-gray-600">Account Number</label>
-                  <input
-                    type="text"
-                    name="accountNumber"
-                    placeholder="Enter account number"
-                    value={receiver.accountNumber}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 outline-none"
-                    required
-                  />
-                </div>
-      
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <label className="text-sm text-gray-600">Bank Routing Number (ABA)</label>
-                  <input
-                    type="text"
-                    name="routingNumber"
-                    placeholder="Enter routing number"
-                    value={receiver.routingNumber}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 outline-none"
-                    required
-                  />
-                </div>
-      
-                {/* Amount */}
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <label className="text-sm text-gray-600">Transfer Amount</label>
-                  <input
-                    type="number"
-                    name="amount"
-                    placeholder="Enter amount"
-                    value={receiver.amount}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 outline-none"
-                    required
-                  />
-                </div>
-      
-                {/* Purpose of Payment (Optional) */}
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <label className="text-sm text-gray-600">Purpose of Payment (Optional)</label>
-                  <input
-                    type="text"
-                    name="purpose"
-                    placeholder="Enter purpose (optional)"
-                    value={receiver.purpose}
-                    onChange={handleInputChange}
-                    className="w-full mt-1 px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 outline-none"
-                  />
-                </div>
-      
-             
-      
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  className="w-full bg-red-800 text-white py-3  text-lg font-medium hover:bg-black transition"
-                >
-                  Send Money
-                </button>
-              </form>
-            </div>
-      
-            {/* Loading Overlay */}
-            {loading && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <div className="text-white text-xl font-medium animate-pulse"><img src={log} alt="" /></div>
+        <header className="w-full flex items-center justify-between py-4 border-b max-w-md">
+          <button onClick={() => navigate(-1)} className="text-xl">
+            <FaArrowLeft />
+          </button>
+          <h1 className="text-lg font-semibold">New Transfer</h1>
+          <div className="w-8" />
+        </header>
+
+        <div className="w-full max-w-md bg-white shadow-md rounded-lg p-6 mt-6">
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="bg-gray-100 p-3 rounded-lg flex items-center gap-2">
+              <FaCreditCard className="text-red-600" />
+              <div>
+                <p className="text-sm font-medium">Debit Card</p>
+                <p className="text-xs text-gray-500">**** **** **** 4900</p>
               </div>
-            )}
-      
-           {error && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-sm">
-      <h2 className="text-lg font-semibold text-red-600">Transfer Access Restricted</h2>
+            </div>
 
-      <p className="text-gray-600 mt-2">Tier-2 Compliance Required
-</p>
-      <p className="text-gray-600 mt-2 text-sm">Outbound transfers from this account are currently unavailable.
+            {[
+              { name: "name", label: "Receiver Full Name" },
+              { name: "bank", label: "Bank Name" },
+              { name: "accountNumber", label: "Account Number" },
+              { name: "routingNumber", label: "Routing Number" },
+              { name: "amount", label: "Transfer Amount", type: "number" },
+              { name: "purpose", label: "Purpose (Optional)" },
+            ].map((field) => (
+              <div key={field.name} className="bg-gray-100 p-3 rounded-lg">
+                <label className="text-sm text-gray-600">{field.label}</label>
+                <input
+                  type={field.type || "text"}
+                  name={field.name}
+                  value={(receiver as any)[field.name]}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 px-4 py-2 border rounded-lg"
+                  required={field.name !== "purpose"}
+                />
+              </div>
+            ))}
 
-please contact support 
-
-</p>
-
-      <div className="mt-4 space-y-2">
-        <button
-          onClick={() => setError(false)}
-          className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-        >
-          Close
-        </button>
-
-       
+            <button
+              type="submit"
+              className="w-full bg-red-800 text-white py-3 text-lg hover:bg-black transition"
+            >
+              Send Money
+            </button>
+          </form>
+        </div>
       </div>
-    </div>
-  </div>
-)}
 
-{success && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-sm">
-      <h2 className="text-lg font-semibold text-green-600">Transaction Successful</h2>
+      {/* Loading */}
+      {loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <img src={log} alt="Loading" className="animate-pulse" />
+        </div>
+      )}
 
-      <p className="text-gray-600 mt-2">Your transfer has been completed.</p>
-
-      <div className="mt-4">
-        <button
-          onClick={() => {
-            setSuccess(false);
-            navigate("/dashboard"); // or wherever you want
-          }}
-          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-        >
-          Done
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-
-
+      {/* Error */}
+      {error && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg text-center max-w-sm">
+            <h2 className="text-red-600 font-semibold">
+              Transfer Access Restricted
+            </h2>
+            <p className="text-sm mt-2">
+              Tier-2 Compliance Required. Please contact support.
+            </p>
+            <button
+              onClick={() => setError(false)}
+              className="mt-4 w-full bg-red-600 text-white py-2 rounded"
+            >
+              Close
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Success */}
+      {success && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg text-center max-w-sm">
+            <h2 className="text-green-600 font-semibold">
+              Transaction Successful
+            </h2>
+            <p className="mt-2 text-sm">Your transfer has been completed.</p>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="mt-4 w-full bg-green-600 text-white py-2 rounded"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
       <BottomNav2 />

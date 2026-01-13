@@ -52,6 +52,24 @@ const TransactionHistory = () => {
   //   .filter((t) => t.type === "Debit")
   //   .reduce((sum, t) => sum + t.amount, 0);
 
+  const formatAmount = (amount: string | number) => {
+  // Remove any non-numeric characters except period (.) or comma
+  let cleaned = String(amount).replace(/[^0-9.,-]/g, "");
+
+  // Replace comma with dot if comma is used as decimal
+  // If you have amounts like "7,000.50" (US) -> "7000.50"
+  // If your backend uses "7.000,50" (EU style) -> handle commas
+  if (cleaned.indexOf(",") > -1 && cleaned.indexOf(".") === -1) {
+    cleaned = cleaned.replace(",", ".");
+  } else {
+    cleaned = cleaned.replace(/,/g, "");
+  }
+
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
+
   return (
     <>
       <div className="max-w-5xl mx-auto bg-white rounded-xl  overflow-hidden mt-8 p-4 md:p-8">
@@ -104,21 +122,20 @@ const TransactionHistory = () => {
                   <p className="text-sm font-medium text-gray-800">
                     {tx.description}
                   </p>
-                  <div className="flex justify-between items-center mt-1">
-                    <span
-                      className={`font-semibold ${
-                        tx.type === "debit" ? "text-red-500" : "text-green-600"
-                      }`}
-                    >
-                      {tx.amount}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      Bal: $
-                      {userAmount.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
+                 <div className="flex justify-between items-center mt-1">
+  <span
+    className={`font-semibold ${
+      tx.type === "debit" ? "text-red-500" : "text-green-600"
+    }`}
+  >
+    ${formatAmount(tx.amount).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}
+  </span>
+  <span className="text-xs text-gray-400">Successful</span>
+</div>
+
                 </div>
               ))}
 

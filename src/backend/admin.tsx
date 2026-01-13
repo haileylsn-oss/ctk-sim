@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getUsers, updateUser, deleteUser } from "./api";
 
+
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
